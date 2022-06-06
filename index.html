@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+    integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+  <style>
+    html,
+    body {
+      height: 100%
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="page1" class="hidden w-full h-full">
+    <div class="w-full h-full flex justify-center items-center bg-red-200">
+      <h1 class="text-3xl font-bold underline">
+        Hello world!1
+      </h1>
+      <button type="button"
+        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        下一頁
+      </button>
+    </div>
+  </div>
+
+  <div id="page2" class="hidden w-full h-full">
+    <div class="w-full h-full flex justify-center items-center bg-red-200">
+      <h1 class="text-3xl font-bold underline">
+        Hello world!2
+      </h1>
+      <button type="button"
+        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        下一頁
+      </button>
+    </div>
+  </div>
+
+  <div id="page3" class="hidden w-full h-full">
+    <div class="w-full h-full flex justify-center items-center bg-red-200">
+      <h1 class="text-3xl font-bold underline">
+        Hello world!3
+      </h1>
+      <button type="button"
+        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        下一頁
+      </button>
+    </div>
+  </div>
+
+  <script>
+    $('#page1').toggleClass('hidden')
+
+    $('#page1 button').click(() => {
+      $('#page1').toggleClass('hidden')
+      $('#page2').toggleClass('hidden')
+    })
+
+    $('#page2 button').click(() => {
+      $('#page2').toggleClass('hidden')
+      $('#page3').toggleClass('hidden')
+    })
+
+    $('#page3 button').click(() => {
+      $('#page3').toggleClass('hidden')
+      $('#page1').toggleClass('hidden')
+    })
+  </script>
+</body>
+
+</html>

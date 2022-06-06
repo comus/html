@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "echo 'build'"
+  },
   "devDependencies": {
     "tailwindcss": "^3.0.24"
   }

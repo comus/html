@@ -53,6 +53,39 @@ export class Camera {
     this.canvasId = canvasId
     this.video = document.getElementById(videoId);
     this.canvas = new fabric.Canvas(canvasId, { selection: false });
+    this.ctx = this.canvas.getContext('2d');
+    this.scatterGLEl = document.querySelector('#scatter-gl-container');
+    this.scatterGL = new ScatterGL(this.scatterGLEl, {
+      'rotateOnStart': true,
+      'selectEnabled': false,
+      'styles': {polyline: {defaultOpacity: 1, deselectedOpacity: 1}}
+    });
+    this.scatterGLHasInitialized = false;
+
+    this.data = {}
+    this.canvas.on('object:moving', (e) => {
+      var circle = e.target;
+      // console.log('object:moving', circle.poseId, circle.keypointName, this.data[circle.poseId][circle.keypointName])
+      if (this.data[circle.poseId]) {
+        // console.log('found1')
+        if (this.data[circle.poseId][circle.keypointName]) {
+          // console.log('found2')
+          const found = this.data[circle.poseId][circle.keypointName]
+          if (found.lines) {
+            for (let i = 0; i < found.lines.length; i++) {
+              const line = found.lines[i]
+              // console.log('found line', line)
+              if (line.type === 1) {
+                line.line.set({ 'x1': circle.left, 'y1': circle.top })
+              } else if (line.type === 2) {
+                line.line.set({ 'x2': circle.left, 'y2': circle.top })
+              }
+            }
+            this.canvas.renderAll();
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -60,96 +93,79 @@ export class Camera {
    * @param cameraParam From app `STATE.camera`.
    */
   static async setupCamera(cameraParam, videoId, canvasId) {
-    const camera = new Camera(videoId, canvasId);
-
-    if (videoId === 'webcam') {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error(
-            'Browser API navigator.mediaDevices.getUserMedia not available');
-      }
-
-      const {targetFPS, sizeOption} = cameraParam;
-      const $size = params.VIDEO_SIZE[sizeOption];
-      const videoConfig = {
-        'audio': false,
-        'video': {
-          facingMode: 'user',
-          // Only setting the video to a specified size for large screen, on
-          // mobile devices accept the default size.
-          width: isMobile() ? params.VIDEO_SIZE['360 X 270'].width : $size.width,
-          height: isMobile() ? params.VIDEO_SIZE['360 X 270'].height :
-                              $size.height,
-          frameRate: {
-            ideal: targetFPS,
-          }
-        }
-      };
-      
-      const stream = await navigator.mediaDevices.getUserMedia(videoConfig);
-
-      camera.video.srcObject = stream;
-
-      await new Promise((resolve) => {
-        camera.video.onloadedmetadata = () => {
-          resolve(video);
-        };
-      });
-
-      camera.video.play();
-
-      // const ctx = camera.canvas.getContext("2d");
-      // ctx.translate(camera.video.videoWidth, 0);
-      // ctx.scale(-1, 1);
-
-      // camera.canvas.setViewportTransform([-1, 0, 0, 1, camera.video.videoWidth, 0]);
-
-      // const videoWidth = camera.video.videoWidth;
-      // const videoHeight = camera.video.videoHeight;
-      // // Must set below two lines, otherwise video element doesn't show.
-      // camera.video.width = videoWidth;
-      // camera.video.height = videoHeight;
-      // camera.canvas.setWidth(videoWidth);
-      // camera.canvas.setHeight(videoHeight);
-    } else {
-
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error(
+          'Browser API navigator.mediaDevices.getUserMedia not available');
     }
 
-    // if (videoId === 'video') {
-    //   const videoWidth = camera.video.videoWidth;
-    //   const videoHeight = camera.video.videoHeight;
-    //   // Must set below two lines, otherwise video element doesn't show.
-    //   camera.video.width = videoWidth;
-    //   camera.video.height = videoHeight;
+    const {targetFPS, sizeOption} = cameraParam;
+    const $size = params.VIDEO_SIZE[sizeOption];
+    const videoConfig = {
+      'audio': false,
+      'video': {
+        facingMode: 'user',
+        // Only setting the video to a specified size for large screen, on
+        // mobile devices accept the default size.
+        width: isMobile() ? params.VIDEO_SIZE['360 X 270'].width : $size.width,
+        height: isMobile() ? params.VIDEO_SIZE['360 X 270'].height :
+                             $size.height,
+        frameRate: {
+          ideal: targetFPS,
+        }
+      }
+    };
 
-    //   camera.canvas.setWidth(videoWidth);
-    //   camera.canvas.setHeight(videoHeight);
+    const stream = await navigator.mediaDevices.getUserMedia(videoConfig);
 
-    //   // Because the image from camera is mirrored, need to flip horizontally.
-    //   // camera.ctx.translate(camera.video.videoWidth, 0);
-    //   // camera.ctx.scale(-1, 1);
-    // } else {
-    //   camera.video.width = 1280;
-    //   camera.video.height = 720;
-    //   camera.canvas.setWidth(1280 / 2);
-    //   camera.canvas.setHeight(720 / 2);
-    // }
+    const camera = new Camera(videoId, canvasId);
+    camera.video.srcObject = stream;
+
+    await new Promise((resolve) => {
+      camera.video.onloadedmetadata = () => {
+        resolve(video);
+      };
+    });
+
+    camera.video.play();
+
+    const videoWidth = camera.video.videoWidth;
+    const videoHeight = camera.video.videoHeight;
+    // Must set below two lines, otherwise video element doesn't show.
+    camera.video.width = videoWidth;
+    camera.video.height = videoHeight;
+
+    camera.canvas.width = videoWidth;
+    camera.canvas.height = videoHeight;
+    // const canvasContainer = document.querySelector('.canvas-wrapper');
+    // canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
+
+    // Because the image from camera is mirrored, need to flip horizontally.
+    // camera.ctx.translate(camera.video.videoWidth, 0);
+    // camera.ctx.scale(-1, 1);
+
+    camera.scatterGLEl.style =
+        `width: ${videoWidth}px; height: ${videoHeight}px;`;
+    camera.scatterGL.resize();
+
+    camera.scatterGLEl.style.display =
+        params.STATE.modelConfig.render3D ? 'inline-block' : 'none';
 
     return camera;
   }
 
   drawCtx() {
-    if (this.videoId === 'webcam') {
-      var imgInstance = new fabric.Image(this.video, {
-        left: 0,
-        top: 0,
-        objectCaching: false,
-        selectable: false,
-        hoverCursor: 'default'
-      });
-      this.canvas.add(imgInstance);
-    } else {
+    var imgInstance = new fabric.Image(this.video, {
+      left: 0,
+      top: 0,
+      objectCaching: false,
+      selectable: false,
+      hoverCursor: 'default'
+    });
+    this.canvas.add(imgInstance);
+  }
 
-    }
+  clearCtx() {
+    this.ctx.clearRect(0, 0, this.video.videoWidth, this.video.videoHeight);
   }
 
   /**
@@ -157,7 +173,10 @@ export class Camera {
    * @param poses A list of poses to render.
    */
   drawResults(poses) {
-    for (const pose of poses) {
+    this.data = {}
+    for (let i = 0; i < poses.length; i++) {
+      const pose = poses[i]
+      pose.id = i
       this.drawResult(pose);
     }
   }
@@ -168,8 +187,12 @@ export class Camera {
    */
   drawResult(pose) {
     if (pose.keypoints != null) {
-      this.drawKeypoints(pose.keypoints);
+      this.data[pose.id] = _.keyBy(pose.keypoints, 'name')
+      this.drawKeypoints(pose.keypoints, pose.id);
       this.drawSkeleton(pose.keypoints, pose.id);
+    }
+    if (pose.keypoints3D != null && params.STATE.modelConfig.render3D) {
+      this.drawKeypoints3D(pose.keypoints3D);
     }
   }
 
@@ -177,24 +200,24 @@ export class Camera {
    * Draw the keypoints on the video.
    * @param keypoints A list of keypoints.
    */
-  drawKeypoints(keypoints) {
+  drawKeypoints(keypoints, poseId) {
     const keypointInd =
         poseDetection.util.getKeypointIndexBySide(params.STATE.model);
 
     for (const i of keypointInd.middle) {
-      this.drawKeypoint(keypoints[i], 'red');
+      this.drawKeypoint(keypoints[i], 'red', poseId);
     }
 
     for (const i of keypointInd.left) {
-      this.drawKeypoint(keypoints[i], 'green');
+      this.drawKeypoint(keypoints[i], 'green', poseId);
     }
 
     for (const i of keypointInd.right) {
-      this.drawKeypoint(keypoints[i], 'orange');
+      this.drawKeypoint(keypoints[i], 'orange', poseId);
     }
   }
 
-  drawKeypoint(keypoint, color) {
+  drawKeypoint(keypoint, color, poseId) {
     // If score is null, just show the keypoint.
     const score = keypoint.score != null ? keypoint.score : 1;
     const scoreThreshold = params.STATE.modelConfig.scoreThreshold || 0;
@@ -212,6 +235,8 @@ export class Camera {
       });
       c.hasControls = false
       c.hasBorders = false;
+      c.poseId = poseId,
+      c.keypointName = keypoint.name
       this.canvas.add(c)
     }
   }
@@ -245,7 +270,56 @@ export class Camera {
             evented: false,
           });
           this.canvas.add(line)
+          if (this.data[poseId][kp1.name]) {
+            if (!this.data[poseId][kp1.name].lines) {
+              this.data[poseId][kp1.name].lines = []
+            }
+            this.data[poseId][kp1.name].lines.push({ line, type: 1})
+          }
+          if (this.data[poseId][kp2.name]) {
+            if (!this.data[poseId][kp2.name].lines) {
+              this.data[poseId][kp2.name].lines = []
+            }
+            this.data[poseId][kp2.name].lines.push({ line, type: 2 })
+          }
         }
       });
+  }
+
+  drawKeypoints3D(keypoints) {
+    const scoreThreshold = params.STATE.modelConfig.scoreThreshold || 0;
+    const pointsData =
+        keypoints.map(keypoint => ([-keypoint.x, -keypoint.y, -keypoint.z]));
+
+    const dataset =
+        new ScatterGL.Dataset([...pointsData, ...ANCHOR_POINTS]);
+
+    const keypointInd =
+        poseDetection.util.getKeypointIndexBySide(params.STATE.model);
+    this.scatterGL.setPointColorer((i) => {
+      if (keypoints[i] == null || keypoints[i].score < scoreThreshold) {
+        // hide anchor points and low-confident points.
+        return '#ffffff';
+      }
+      if (i === 0) {
+        return '#ff0000' /* Red */;
+      }
+      if (keypointInd.left.indexOf(i) > -1) {
+        return '#00ff00' /* Green */;
+      }
+      if (keypointInd.right.indexOf(i) > -1) {
+        return '#ffa500' /* Orange */;
+      }
+    });
+
+    if (!this.scatterGLHasInitialized) {
+      this.scatterGL.render(dataset);
+    } else {
+      this.scatterGL.updateDataset(dataset);
+    }
+    const connections = poseDetection.util.getAdjacentPairs(params.STATE.model);
+    const sequences = connections.map(pair => ({indices: pair}));
+    this.scatterGL.setSequences(sequences);
+    this.scatterGLHasInitialized = true;
   }
 }

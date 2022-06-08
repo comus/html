@@ -68,11 +68,15 @@
       </video>
     </div>
 
-    <video class="hidden" height="270" width="360" id="webcam"
-      style="-webkit-transform: scaleX(-1); transform: scaleX(-1);">
-    </video>
+    <div>
+      <video class="hidden" height="480" width="640" id="webcam"
+        style="-webkit-transform: scaleX(-1); transform: scaleX(-1);">
+      </video>
 
-    <canvas id="c" width="360" height="270" style="border:1px solid #ccc"></canvas>
+      <canvas id="c" width="640" height="480" style="border:1px solid #ccc"></canvas>
+
+      <div id="scatter-gl-container"></div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
@@ -82,7 +86,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@3.8.0/dist/tf-backend-wasm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection/dist/pose-detection.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.106.2/build/three.min.js"></script>
-  <!-- <script src="https://cdn.jsdelivr.net/npm/scatter-gl@0.0.1/lib/scatter-gl.min.js"></script> -->
+  <script src="https://cdn.jsdelivr.net/npm/scatter-gl@0.0.1/lib/scatter-gl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.1/dist/fabric.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
   <script>

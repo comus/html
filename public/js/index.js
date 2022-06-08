@@ -1,15 +1,29 @@
-console.log('jjsdlkjflsdjf', _.filter)
+/**
+ * @license
+ * Copyright 2021 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =============================================================================
+ */
 
 tf.wasm.setWasmPaths(
     `https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@${
       tf.wasm.version_wasm}/dist/`);
 
 import {Camera} from './camera.js';
-import * as params from './params.js';
+import {setupDatGui} from './option_panel.js';
+import {STATE} from './params.js';
 import {setupStats} from './stats_panel.js';
 import {setBackendAndEnvFlags} from './util.js';
-
-const STATE = params.STATE
 
 let detector, detector2, camera, camera2, stats;
 let startInferenceTime, numInferences = 0;
@@ -26,8 +40,65 @@ async function createDetector() {
         inputResolution: {width: 500, height: 500},
         multiplier: 0.75
       });
+    case poseDetection.SupportedModels.BlazePose:
+      const runtime = STATE.backend.split('-')[0];
+      if (runtime === 'tfjs') {
+        return poseDetection.createDetector(
+            STATE.model, {runtime, modelType: STATE.modelConfig.type});
+      }
+    case poseDetection.SupportedModels.MoveNet:
+      let modelType;
+      if (STATE.modelConfig.type == 'lightning') {
+        modelType = poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING;
+      } else if (STATE.modelConfig.type == 'thunder') {
+        modelType = poseDetection.movenet.modelType.SINGLEPOSE_THUNDER;
+      } else if (STATE.modelConfig.type == 'multipose') {
+        modelType = poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING;
+      }
+      const modelConfig = {modelType};
+
+      if (STATE.modelConfig.customModel !== '') {
+        modelConfig.modelUrl = STATE.modelConfig.customModel;
+      }
+      if (STATE.modelConfig.type === 'multipose') {
+        modelConfig.enableTracking = STATE.modelConfig.enableTracking;
+      }
+      return poseDetection.createDetector(STATE.model, modelConfig);
   }
 }
+
+// async function checkGuiUpdate() {
+//   if (STATE.isTargetFPSChanged || STATE.isSizeOptionChanged) {
+//     camera = await Camera.setupCamera(STATE.camera);
+//     STATE.isTargetFPSChanged = false;
+//     STATE.isSizeOptionChanged = false;
+//   }
+
+//   if (STATE.isModelChanged || STATE.isFlagChanged || STATE.isBackendChanged) {
+//     STATE.isModelChanged = true;
+
+//     window.cancelAnimationFrame(rafId);
+
+//     if (detector != null) {
+//       detector.dispose();
+//     }
+
+//     if (STATE.isFlagChanged || STATE.isBackendChanged) {
+//       await setBackendAndEnvFlags(STATE.flags, STATE.backend);
+//     }
+
+//     try {
+//       detector = await createDetector(STATE.model);
+//     } catch (error) {
+//       detector = null;
+//       alert(error);
+//     }
+
+//     STATE.isFlagChanged = false;
+//     STATE.isBackendChanged = false;
+//     STATE.isModelChanged = false;
+//   }
+// }
 
 function beginEstimatePosesStats() {
   startInferenceTime = (performance || Date).now();
@@ -64,6 +135,7 @@ async function renderResult(camera, detector) {
   // from a URL that does not exist).
   if (detector != null) {
     // FPS only counts the time it takes to finish estimatePoses.
+
     if (camera.videoId === 'webcam') {
       beginEstimatePosesStats();
     }
@@ -77,7 +149,7 @@ async function renderResult(camera, detector) {
     } catch (error) {
       detector.dispose();
       detector = null;
-      console.log(error);
+      alert(error);
     }
 
     if (camera.videoId === 'webcam') {
@@ -86,7 +158,7 @@ async function renderResult(camera, detector) {
   }
 
   camera.canvas.clear();
-  
+
   camera.drawCtx();
 
   // The null check makes sure the UI is not in the middle of changing to a
@@ -98,7 +170,13 @@ async function renderResult(camera, detector) {
 }
 
 async function renderPrediction() {
-  // await renderResult(camera2, detector2);
+  // await checkGuiUpdate();
+
+  // if (!STATE.isModelChanged) {
+  //   await renderResult(camera, detector);
+  // }
+
+  // rafId = requestAnimationFrame(renderPrediction);
 
   fabric.util.requestAnimFrame(async function render() {
     await renderResult(camera, detector);
@@ -107,77 +185,22 @@ async function renderPrediction() {
   });
 };
 
-async function setup () {
-  params.STATE.model = poseDetection.SupportedModels.PoseNet;
-  params.STATE.modelConfig = { ...params.POSENET_CONFIG };
-
-  const backends = params.MODEL_BACKEND_MAP[params.STATE.model];
-  params.STATE.backend = backends[0];
-
-  // Clean up the cache to query tunable flags' default values.
-  let TUNABLE_FLAG_DEFAULT_VALUE_MAP = {};
-  params.STATE.flags = {};
-  for (const backend in params.BACKEND_FLAGS_MAP) {
-    for (
-      let index = 0;
-      index < params.BACKEND_FLAGS_MAP[backend].length;
-      index++
-    ) {
-      const flag = params.BACKEND_FLAGS_MAP[backend][index];
-      TUNABLE_FLAG_DEFAULT_VALUE_MAP[flag] = await tf.env().getAsync(flag);
-    }
-  }
-
-  // Initialize STATE.flags with tunable flags' default values.
-  for (const flag in TUNABLE_FLAG_DEFAULT_VALUE_MAP) {
-    if (params.BACKEND_FLAGS_MAP[params.STATE.backend].indexOf(flag) > -1) {
-      params.STATE.flags[flag] = TUNABLE_FLAG_DEFAULT_VALUE_MAP[flag];
-    }
-  }
-}
-
 async function app() {
-  await setup();
+  const urlParams = {
+    get: () => 'movenet'
+  }
+
+  await setupDatGui(urlParams);
+
   stats = setupStats();
-  
 
   camera = await Camera.setupCamera(STATE.camera, 'webcam', 'c');
-  // // camera2 = await Camera.setupCamera(STATE.camera, 'v', 'o');
 
   await setBackendAndEnvFlags(STATE.flags, STATE.backend);
 
   detector = await createDetector();
-  // // detector2 = await createDetector();
 
   renderPrediction();
-
-  // var canvas = new fabric.Canvas('c');
-  // var webcamEl = document.getElementById('webcam');
-
-  // var webcam = new fabric.Image(webcamEl, {
-  //   left: 0,
-  //   top: 0,
-  //   objectCaching: false,
-  // });
-
-  // // adding webcam video element
-  // navigator.mediaDevices.getUserMedia({
-  //   'audio': false,
-  //   'video': {
-  //     facingMode: 'user',
-  //     width: 360,
-  //     height: 270
-  //   }
-  // })
-  // .then(function getWebcamAllowed(localMediaStream) {
-  //   webcamEl.srcObject = localMediaStream;
-
-  //   canvas.add(webcam);
-  //   webcam.moveTo(0); // move webcam element to back of zIndex stack
-  //   webcam.getElement().play();
-  // }).catch(function getWebcamNotAllowed(e) {
-  // // block will be hit if user selects "no" for browser "allow webcam access" prompt
-  // });
 };
 
 app();

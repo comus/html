@@ -25,7 +25,7 @@ export const VIDEO_SIZE = {
   '360 X 270': {width: 360, height: 270}
 };
 export const STATE = {
-  camera: {targetFPS: 60, sizeOption: '360 X 270'},
+  camera: {targetFPS: 60, sizeOption: '640 X 480'},
   backend: '',
   flags: {},
   modelConfig: {}
@@ -37,12 +37,12 @@ export const BLAZEPOSE_CONFIG = {
   render3D: true
 };
 export const POSENET_CONFIG = {
-  maxPoses: 5,
+  maxPoses: 1,
   scoreThreshold: 0.5
 };
 export const MOVENET_CONFIG = {
-  maxPoses: 1,
-  type: 'lightning',
+  maxPoses: 5,
+  type: 'multipose',
   scoreThreshold: 0.3,
   customModel: '',
   enableTracking: false
